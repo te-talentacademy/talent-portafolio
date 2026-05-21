@@ -96,7 +96,9 @@ export async function fetchAllQuotes(
   apiKey: string,
   opts: { concurrency?: number } = {},
 ): Promise<QuoteResult[]> {
-  const concurrency = Math.max(1, Math.min(opts.concurrency ?? 8, symbols.length));
+  const requested = Number.isFinite(opts.concurrency) ? Math.trunc(opts.concurrency as number) : 8;
+  const upperBound = Math.max(1, symbols.length);
+  const concurrency = Math.max(1, Math.min(requested, upperBound));
   const results: QuoteResult[] = new Array(symbols.length);
   let cursor = 0;
 
