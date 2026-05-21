@@ -1,9 +1,6 @@
 // AVANT MARKETS — Header with brand, search, and nav
 
-const { useState } = React;
-
 function BrandMark() {
-  // Original geometric "A" mark — chevron/triangle on a hex base
   return (
     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="brand-mark">
       <path
@@ -49,7 +46,7 @@ function MarketIcon() {
   );
 }
 
-function Header({ screen, onNavigate, searchValue, onSearch }) {
+export function Header({ screen, onNavigate, searchValue, onSearch }) {
   return (
     <header className="header">
       <div className="brand">
@@ -63,7 +60,7 @@ function Header({ screen, onNavigate, searchValue, onSearch }) {
       <div className="search">
         <input
           className="search-input"
-          placeholder="Buscar ticker o empresa (ej. NVRA)"
+          placeholder="Buscar ticker o empresa (ej. AAPL)"
           value={searchValue}
           onChange={(e) => onSearch(e.target.value)}
         />
@@ -89,5 +86,3 @@ function Header({ screen, onNavigate, searchValue, onSearch }) {
     </header>
   );
 }
-
-Object.assign(window, { Header });

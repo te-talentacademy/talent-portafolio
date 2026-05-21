@@ -1,13 +1,17 @@
 // AVANT MARKETS — Ticker Detail screen
 
-const { useState: useStateD, useMemo, useRef, useEffect } = React;
+import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { fmtMoney, fmtSigned, fmtPct } from "../data.js";
+import { fmtMarketCap, fmtVolumeMillions, fmtNumberOrDash, fmtPctOrDash } from "../lib/format.js";
+import { syntheticSeries } from "../lib/syntheticSeries.js";
 
-// ─── price chart ───────────────────────────────────────
 function PriceChart({ data, animate }) {
   const W = 700;
   const H = 380;
   const padL = 28;
-  const padR = 64;   // room for price labels on right
+  const padR = 64;
   const padT = 16;
   const padB = 36;
 
@@ -15,7 +19,6 @@ function PriceChart({ data, animate }) {
   const max = Math.max(...data);
   const range = (max - min) || 1;
 
-  // pad axis a bit
   const yMin = min - range * 0.08;
   const yMax = max + range * 0.08;
   const yRange = yMax - yMin;
@@ -35,10 +38,8 @@ function PriceChart({ data, animate }) {
 
   const lastX = padL + (data.length - 1) * step;
   const [, lastY] = xy(data.length - 1, data[data.length - 1]);
-  const firstY = padT + usableH;
   const fillPath = `${linePath} L ${lastX.toFixed(2)} ${(padT + usableH).toFixed(2)} L ${padL} ${(padT + usableH).toFixed(2)} Z`;
 
-  // Y axis labels — 5 evenly spaced
   const yTicks = [];
   for (let i = 0; i <= 4; i++) {
     const v = yMin + (yRange * i) / 4;
@@ -46,7 +47,6 @@ function PriceChart({ data, animate }) {
     yTicks.push({ v, y });
   }
 
-  // X axis times (mocked but plausible session times)
   const xLabels = ["09:30", "11:00", "12:30", "14:00", "15:30", "16:00"];
 
   return (
@@ -58,7 +58,6 @@ function PriceChart({ data, animate }) {
         </linearGradient>
       </defs>
 
-      {/* grid lines + Y labels */}
       {yTicks.map((t, i) => (
         <g key={i}>
           <line className="grid-line" x1={padL} x2={W - padR} y1={t.y} y2={t.y} />
@@ -68,17 +67,12 @@ function PriceChart({ data, animate }) {
         </g>
       ))}
 
-      {/* fill */}
       <path className="price-fill" d={fillPath} />
-
-      {/* line */}
       <path className={"price-line" + (animate ? " animate" : "")} d={linePath} />
 
-      {/* end dot */}
       <circle className="price-dot" cx={lastX} cy={lastY} r="5" />
       <circle className="price-dot" cx={lastX} cy={lastY} r="9" opacity="0.25" />
 
-      {/* X labels */}
       {xLabels.map((l, i) => {
         const x = padL + (i / (xLabels.length - 1)) * usableW;
         return (
@@ -89,7 +83,6 @@ function PriceChart({ data, animate }) {
   );
 }
 
-// ─── news image placeholder (subtly-striped gradient) ───
 function NewsImagePlaceholder({ hue, label }) {
   return (
     <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
@@ -115,31 +108,89 @@ function NewsImagePlaceholder({ hue, label }) {
   );
 }
 
-// ─── ticker detail screen ───────────────────────────────
-function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
-  const t = TICKERS[tickerKey];
-  const [timeframe, setTimeframe] = useStateD("1D");
-  const series = t.series[timeframe];
+function hueFromString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
+function timeAgo(ms) {
+  const diff = Date.now() - ms;
+  if (diff < 0) return "Hace instantes";
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Hace instantes";
+  if (mins < 60) return `Hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Hace ${days} d`;
+  return new Date(ms).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+}
+
+function TickerDetailSkeleton() {
+  return (
+    <div className="screen">
+      <div className="detail-head">
+        <div className="detail-head-left">
+          <div className="skeleton" style={{ width: 72, height: 72, borderRadius: 18 }} />
+          <div style={{ flex: 1 }}>
+            <div className="skeleton skeleton-line" style={{ width: "55%", height: 22 }} />
+            <div className="skeleton skeleton-line" style={{ width: "35%" }} />
+          </div>
+        </div>
+        <div className="detail-head-right">
+          <div className="skeleton skeleton-line" style={{ width: 160, height: 36 }} />
+          <div className="skeleton skeleton-line" style={{ width: 200 }} />
+        </div>
+      </div>
+      <div className="chart-row">
+        <div className="card chart-card">
+          <div className="skeleton" style={{ width: "100%", height: 380 }} />
+        </div>
+        <div className="card">
+          <div className="skeleton skeleton-line" style={{ width: "60%" }} />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="skeleton skeleton-row" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
+  const [timeframe, setTimeframe] = useState("1D");
+  const ticker = useQuery(api.tickers.getTicker, { symbol: tickerKey });
+  const news = useQuery(api.news.listNewsForTicker, { symbol: tickerKey, limit: 6 }) ?? [];
+
+  if (ticker === undefined) return <TickerDetailSkeleton />;
+  if (ticker === null) {
+    return (
+      <div className="screen">
+        <div className="empty-state">
+          <div className="empty-title">Ticker no encontrado</div>
+          <div>El símbolo <strong>{tickerKey}</strong> no está en la base de datos.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const t = ticker;
+  const series = syntheticSeries(t.symbol)[timeframe];
   const positive = t.change >= 0;
-
-  // Build news for this ticker; fall back to NVRA news for others (just example data)
-  const news = NEWS_BY_TICKER[tickerKey] || NEWS_BY_TICKER.NVRA;
-
-  // Force chart re-mount on timeframe change for redraw animation
-  const chartKey = `${tickerKey}-${timeframe}`;
+  const chartKey = `${t.symbol}-${timeframe}-${t.lastPriceAt}`;
 
   return (
     <div className="screen">
-      {/* Detail header */}
       <div className="detail-head">
         <div className="detail-head-left">
           <div className="ticker-logo" style={{ color: t.accent, textShadow: "0 0 14px " + t.accent + "80" }}>
-            {t.ticker.slice(0, 2)}
+            {t.symbol.slice(0, 2)}
           </div>
           <div>
             <h1 className="ticker-name">{t.name}</h1>
             <div className="ticker-meta">
-              <span>{t.ticker}</span>
+              <span>{t.symbol}</span>
               <span className="dot" />
               <span>{t.exchange}</span>
               <span className="dot" />
@@ -150,7 +201,7 @@ function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
 
         <div className="detail-head-right">
           <div className="price">
-            {fmtMoney(t.price)}
+            {fmtMoney(t.lastPrice)}
             <span className="price-currency">USD</span>
           </div>
           <div className={"price-change" + (positive ? "" : " neg")}>
@@ -174,7 +225,6 @@ function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
         </div>
       </div>
 
-      {/* Chart + metrics */}
       <div className="chart-row">
         <div className="card chart-card">
           <div className="chart-tabs">
@@ -194,45 +244,63 @@ function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
         <div className="card">
           <div className="metrics-title">Métricas clave</div>
           <div className="metrics-list">
-            <div className="metric-row"><span className="metric-label">Capitalización</span><span className="metric-value">{t.marketCap}</span></div>
-            <div className="metric-row"><span className="metric-label">Volumen</span><span className="metric-value">{t.volume}</span></div>
-            <div className="metric-row"><span className="metric-label">P/E</span><span className="metric-value">{t.pe}</span></div>
-            <div className="metric-row"><span className="metric-label">Dividendos</span><span className="metric-value">{t.dividend}</span></div>
-            <div className="metric-row"><span className="metric-label">Beta (5A)</span><span className="metric-value">{t.beta}</span></div>
+            <div className="metric-row"><span className="metric-label">Capitalización</span><span className="metric-value">{fmtMarketCap(t.marketCap)}</span></div>
+            <div className="metric-row"><span className="metric-label">Vol. prom. 10d</span><span className="metric-value">{fmtVolumeMillions(t.volume10d)}</span></div>
+            <div className="metric-row"><span className="metric-label">P/E (TTM)</span><span className="metric-value">{fmtNumberOrDash(t.peRatio)}</span></div>
+            <div className="metric-row"><span className="metric-label">Dividendo</span><span className="metric-value">{fmtPctOrDash(t.dividendYield)}</span></div>
+            <div className="metric-row"><span className="metric-label">Beta</span><span className="metric-value">{fmtNumberOrDash(t.beta)}</span></div>
           </div>
         </div>
       </div>
 
-      {/* News */}
       <div className="section-head">
         <h2 className="section-title">Noticias recientes</h2>
-        <a className="section-link" href="#">Ver todas</a>
       </div>
-      <div className="news-grid">
-        {news.map((n, i) => (
-          <article className="news-card" key={i}>
-            <div className="news-img">
-              <NewsImagePlaceholder hue={n.hue} label={`[ imagen · ${n.tag.toLowerCase()} ]`} />
-            </div>
-            <div className="news-body">
-              <div className="news-tag">{n.tag}</div>
-              <h3 className="news-title">{n.title}</h3>
-              <div className="news-time">{n.time}</div>
-            </div>
-          </article>
-        ))}
-      </div>
+      {news.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-title">Sin noticias todavía</div>
+          <div>Los titulares se actualizan periódicamente desde Finnhub.</div>
+        </div>
+      ) : (
+        <div className="news-grid">
+          {news.slice(0, 3).map((n) => (
+            <article className="news-card" key={n._id}>
+              <div className="news-img">
+                {n.image
+                  ? <img
+                      src={n.image}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        el.parentElement?.classList.add("news-img-fallback");
+                      }}
+                    />
+                  : <NewsImagePlaceholder hue={hueFromString(n.headline)} label={`[ ${n.source || "noticia"} ]`} />
+                }
+              </div>
+              <div className="news-body">
+                <div className="news-tag">{n.category || n.source || "Noticia"}</div>
+                <h3 className="news-title">
+                  <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                    {n.headline}
+                  </a>
+                </h3>
+                <div className="news-time">{timeAgo(n.publishedAt)}</div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
 
-      {/* footer */}
       <div className="footer">
         <div>Los datos se muestran con fines informativos y no constituyen asesoramiento de inversión.</div>
         <div className="footer-right">
-          <div>Fuente: <span>Nasdaq</span></div>
-          <div>· <span>Datos en tiempo real</span></div>
+          <div>Fuente: <span>Finnhub</span></div>
+          <div>· <span>Actualización ≈10 s</span></div>
         </div>
       </div>
     </div>
   );
 }
-
-Object.assign(window, { TickerDetail });
