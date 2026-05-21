@@ -106,7 +106,11 @@ export function Portfolio({ onOpenTicker }) {
   enriched.sort((a, b) => b.value - a.value);
 
   const todayChange = enriched.reduce((s, h) => s + h.info.change * h.qty, 0);
-  const todayChangePct = sumValue > 0 ? (todayChange / (sumValue - todayChange)) * 100 : 0;
+  const todayChangeBaseline = sumValue - todayChange;
+  const todayChangePct =
+    todayChangeBaseline !== 0 && Number.isFinite(todayChangeBaseline)
+      ? (todayChange / todayChangeBaseline) * 100
+      : 0;
 
   const sectorMap = {};
   enriched.forEach((h) => {
@@ -211,7 +215,18 @@ export function Portfolio({ onOpenTicker }) {
                 const todayPos = h.info.change >= 0;
                 const series = syntheticSeries(h.symbol)["1S"];
                 return (
-                  <tr key={h._id} onClick={() => onOpenTicker(h.symbol)}>
+                  <tr
+                    key={h._id}
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => onOpenTicker(h.symbol)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpenTicker(h.symbol);
+                      }
+                    }}
+                  >
                     <td>
                       <div className="holding-name">
                         <div className="holding-logo" style={{ color: h.info.accent, textShadow: `0 0 8px ${h.info.accent}80` }}>
@@ -299,7 +314,19 @@ export function Portfolio({ onOpenTicker }) {
             {movers.map((m) => {
               const pos = m.change >= 0;
               return (
-                <div className="mover-row" key={m.symbol} onClick={() => onOpenTicker(m.symbol)}>
+                <div
+                  className="mover-row"
+                  key={m.symbol}
+                  tabIndex={0}
+                  role="button"
+                  onClick={() => onOpenTicker(m.symbol)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpenTicker(m.symbol);
+                    }
+                  }}
+                >
                   <div className="mover-logo" style={{ color: m.accent, textShadow: `0 0 8px ${m.accent}80` }}>
                     {m.symbol.slice(0, 2)}
                   </div>

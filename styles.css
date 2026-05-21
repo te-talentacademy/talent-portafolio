@@ -774,6 +774,12 @@ input:focus { outline: none; }
   animation: shimmer 1.4s linear infinite;
   border-radius: var(--r-sm);
 }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
 .skeleton-line {
   height: 12px;
   width: 100%;

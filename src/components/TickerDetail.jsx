@@ -259,7 +259,7 @@ export function TickerDetail({ tickerKey, inPortfolio, onToggleAdd }) {
       {news.length === 0 ? (
         <div className="empty-state">
           <div className="empty-title">Sin noticias todavía</div>
-          <div>Los titulares se cargan automáticamente cada hora desde Finnhub.</div>
+          <div>Los titulares se actualizan periódicamente desde Finnhub.</div>
         </div>
       ) : (
         <div className="news-grid">

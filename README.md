@@ -44,7 +44,7 @@ npx convex run seed:seedHoldings            # holdings iniciales con avgCost rea
 
 ## Arquitectura
 
-```
+```text
 React (Vite) ──► useQuery/useMutation ──► Convex (tablas)
                                               ▲
                                               │ internalMutation

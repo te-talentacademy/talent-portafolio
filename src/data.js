@@ -28,12 +28,16 @@ export function fmtPct(n, decimals = 2) {
 }
 
 export function sparkPath(values, w = 96, h = 30) {
+  if (!values || values.length === 0) return "";
+  const pad = 2;
+  const usableH = h - pad * 2;
+  if (values.length === 1) {
+    return `M0 ${(pad + usableH / 2).toFixed(2)}`;
+  }
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
   const step = w / (values.length - 1);
-  const pad = 2;
-  const usableH = h - pad * 2;
   return values
     .map((v, i) => {
       const x = i * step;

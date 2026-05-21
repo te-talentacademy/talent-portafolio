@@ -43,12 +43,25 @@ export type NewsItem = {
   url: string;
 };
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Finnhub ${res.status}: ${url.replace(/token=[^&]+/, "token=***")}`);
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+async function getJson<T>(url: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`Finnhub ${res.status}: ${url.replace(/token=[^&]+/, "token=***")}`);
+    }
+    return (await res.json()) as T;
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      throw new Error(`Finnhub timeout after ${timeoutMs}ms: ${url.replace(/token=[^&]+/, "token=***")}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return (await res.json()) as T;
 }
 
 export async function fetchQuote(symbol: string, apiKey: string): Promise<Quote> {

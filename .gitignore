@@ -3,7 +3,9 @@ dist
 .DS_Store
 .env
 .env.local
+.env.*
 .env.*.local
+!.env.example
 .vite
 
 # Convex local cache

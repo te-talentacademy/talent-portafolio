@@ -217,7 +217,7 @@ export const refreshFundamentalsAndNewsOneSymbol = internalAction({
 
     if (news) {
       const items = news
-        .filter((n) => n.headline && n.url)
+        .filter((n) => n.headline && n.url && typeof n.datetime === "number" && n.datetime > 0)
         .slice(0, 12)
         .map((n) => ({
           headline: n.headline,
@@ -226,7 +226,7 @@ export const refreshFundamentalsAndNewsOneSymbol = internalAction({
           url: n.url,
           image: n.image && n.image.length > 0 ? n.image : undefined,
           category: n.category && n.category.length > 0 ? n.category : undefined,
-          publishedAt: (n.datetime ?? 0) * 1000,
+          publishedAt: n.datetime * 1000,
         }));
       await ctx.runMutation(internal.news._replaceNewsForSymbol, { symbol, items });
     }

@@ -23,7 +23,8 @@ export const _advanceCursor = internalMutation({
       .query("ingestState")
       .withIndex("by_key", (q) => q.eq("key", SINGLETON_KEY))
       .unique();
-    const next = ((row?.lastIdx ?? 0) + 1) % Math.max(1, modulo);
+    const safeModulo = Number.isInteger(modulo) && modulo > 0 ? modulo : 1;
+    const next = ((row?.lastIdx ?? 0) + 1) % safeModulo;
     if (row) {
       await ctx.db.patch(row._id, { lastIdx: next });
     } else {

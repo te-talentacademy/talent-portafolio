@@ -72,11 +72,15 @@ export const seedHoldings = mutation({
         .query("tickers")
         .withIndex("by_symbol", (q) => q.eq("symbol", symbol))
         .unique();
-      const avgCost = ticker?.lastPrice && ticker.lastPrice > 0 ? ticker.lastPrice : 100;
+      if (!ticker || !(ticker.lastPrice > 0)) {
+        // Skip seeding this holding until the ticker exists and has a real price
+        skipped++;
+        continue;
+      }
       await ctx.db.insert("holdings", {
         symbol,
         qty: 1,
-        avgCost,
+        avgCost: ticker.lastPrice,
         addedAt: now,
       });
       inserted++;

@@ -14,15 +14,20 @@ const NEWS_ITEM = v.object({
   publishedAt: v.number(),
 });
 
+const MAX_NEWS_LIMIT = 50;
+const DEFAULT_NEWS_LIMIT = 6;
+
 export const listNewsForTicker = query({
   args: { symbol: v.string(), limit: v.optional(v.number()) },
   returns: v.array(NEWS_ITEM),
   handler: async (ctx, { symbol, limit }) => {
+    const requested = typeof limit === "number" && Number.isFinite(limit) ? Math.floor(limit) : DEFAULT_NEWS_LIMIT;
+    const safeLimit = Math.max(1, Math.min(requested, MAX_NEWS_LIMIT));
     const q = ctx.db
       .query("news")
       .withIndex("by_symbol_published", (idx) => idx.eq("symbol", symbol))
       .order("desc");
-    return await q.take(limit ?? 6);
+    return await q.take(safeLimit);
   },
 });
 
