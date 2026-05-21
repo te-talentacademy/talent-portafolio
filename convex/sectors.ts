@@ -1,0 +1,40 @@
+const FINNHUB_INDUSTRY_TO_SECTOR_ES: Record<string, string> = {
+  Technology: "Tecnología",
+  "Communications": "Comunicaciones",
+  "Communication Services": "Comunicaciones",
+  "Consumer Cyclical": "Consumo cíclico",
+  "Consumer Discretionary": "Consumo cíclico",
+  "Consumer Defensive": "Consumo defensivo",
+  "Consumer Staples": "Consumo defensivo",
+  "Financial Services": "Financiero",
+  Financials: "Financiero",
+  "Pharmaceutical": "Salud",
+  "Pharmaceuticals": "Salud",
+  Healthcare: "Salud",
+  Energy: "Energía",
+  Utilities: "Servicios públicos",
+  "Basic Materials": "Materiales",
+  Materials: "Materiales",
+  Industrials: "Industrial",
+  "Real Estate": "Inmobiliario",
+  Aerospace: "Aeroespacial",
+  Automotive: "Automoción",
+  Automobiles: "Automoción",
+  Retail: "Retail",
+  Media: "Medios",
+  Banking: "Financiero",
+  Banks: "Financiero",
+  Insurance: "Financiero",
+  Semiconductors: "Tecnología",
+  Software: "Tecnología",
+  "Internet Software & Services": "Tecnología",
+  Biotechnology: "Salud",
+  "Medical Devices": "Salud",
+  Telecommunication: "Comunicaciones",
+  "Telecom Services": "Comunicaciones",
+};
+
+export function sectorFromFinnhubIndustry(industry: string | undefined): string {
+  if (!industry) return "Otros";
+  return FINNHUB_INDUSTRY_TO_SECTOR_ES[industry] ?? industry;
+}
